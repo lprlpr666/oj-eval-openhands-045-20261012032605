@@ -29,7 +29,7 @@ public:
     void action() {
         if (requests.empty()) {
             // No requests, stay in place with same direction
-n            return;
+            return;
         }
 
         // Find the next request based on current direction

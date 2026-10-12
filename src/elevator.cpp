@@ -27,6 +27,8 @@ public:
 
     // Add a request for a floor
     void addRequest(int floor) {
+        // We need to add to the appropriate heap based on the floor relative to current_floor
+        // But note: after this add, the current_floor might change due to actions, but that's fine
         if (floor > current_floor) {
             up_requests.push(floor);
         } else if (floor < current_floor) {

@@ -36,33 +36,34 @@ public:
         auto it = requests.end();
         
         if (direction == 1) { // Moving up
-            // Find the smallest floor that is > current_floor (strictly greater)
-            it = requests.upper_bound(current_floor);
-            
+            // Look for any request at or above current floor
+            it = requests.lower_bound(current_floor);
             if (it == requests.end()) {
-                // No requests above, reverse direction and go to highest floor below or equal
+                // No requests above or at current floor, reverse direction
                 direction = -1;
+                // Find the largest request below current floor
                 it = requests.lower_bound(current_floor);
                 if (it != requests.begin()) {
-                    --it; // Previous element (largest floor < current_floor)
+                    --it;
                 } else {
-                    // No requests below, but we have requests (since set is not empty)
-                    // This means all requests are at or above current_floor, but we already checked above
-                    // So this should not happen
+                    // This should not happen since requests is not empty
                     it = requests.begin();
                 }
             }
+            // If we found a request at or above, we go to the first one (smallest >= current_floor)
+            // Note: we won't have a request at current_floor because we just served it or it was canceled
         } else { // Moving down
-            // Find the largest floor that is < current_floor (strictly less)
-            it = requests.lower_bound(current_floor);
+            // Look for any request at or below current floor
+            it = requests.upper_bound(current_floor);
             if (it != requests.begin()) {
-                --it; // Previous element (largest floor < current_floor)
+                --it; // Largest request <= current_floor
             } else {
-                // No requests below, reverse direction and go to lowest floor above or equal
+                // No requests below or at current floor, reverse direction
                 direction = 1;
+                // Find the smallest request above current floor
                 it = requests.upper_bound(current_floor);
                 if (it == requests.end()) {
-                    // All requests are <= current_floor, so go to the highest one
+                    // All requests are at or below current_floor, so go to the largest one
                     it = requests.end();
                     --it;
                 }

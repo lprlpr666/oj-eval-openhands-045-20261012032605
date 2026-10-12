@@ -1,72 +1,77 @@
 #include <iostream>
 #include <cstdio>
-#include <vector>
-#include <queue>
 #include <set>
 
 using namespace std;
 
-// We can only use cstdio and iostream, so we need to implement our own heap
-// or use priority_queue which is based on heap
+// Elevator system for a billion-floor building
+// Supports add, cancel, action, and locate operations
 
 class Elevator {
 private:
     int current_floor;
     int direction; // 1 for up, -1 for down
-    set<int> requests; // Use set to maintain sorted order of requests
+    set<int> requests; // Sorted set of pending requests
 
 public:
     Elevator() : current_floor(0), direction(1) {}
 
+    // Add a request for a floor
     void addRequest(int floor) {
         requests.insert(floor);
     }
 
+    // Cancel a request for a floor
     void cancelRequest(int floor) {
         requests.erase(floor);
     }
 
+    // Execute the next action according to elevator rules
     void action() {
         if (requests.empty()) {
-            // No requests, stay in place with same direction
+            // No pending requests, stay in place with same direction
             return;
         }
 
-        // Find the next request based on current direction
         auto it = requests.end();
         
         if (direction == 1) { // Moving up
-            // Look for any request at or above current floor
+            // Find the first request at or above current floor
             it = requests.lower_bound(current_floor);
+            
             if (it == requests.end()) {
-                // No requests above or at current floor, reverse direction
+                // No requests at or above current floor
+                // Reverse direction to down
                 direction = -1;
-                // Find the largest request below current floor
+                // Find the highest request below current floor
                 it = requests.lower_bound(current_floor);
                 if (it != requests.begin()) {
-                    --it;
+                    --it; // Now points to largest floor < current_floor
                 } else {
-                    // This should not happen since requests is not empty
+                    // This should not happen as requests is not empty
+                    // But to be safe, go to the first request
                     it = requests.begin();
                 }
             }
-            // If we found a request at or above, we go to the first one (smallest >= current_floor)
-            // Note: we won't have a request at current_floor because we just served it or it was canceled
+            // If we found a request at or above, it points to the smallest such request
         } else { // Moving down
-            // Look for any request at or below current floor
+            // Find the first request strictly greater than current floor
             it = requests.upper_bound(current_floor);
-            if (it != requests.begin()) {
-                --it; // Largest request <= current_floor
-            } else {
-                // No requests below or at current floor, reverse direction
+            
+            if (it == requests.begin()) {
+                // No requests at or below current floor (since upper_bound returns begin)
+                // Reverse direction to up
                 direction = 1;
-                // Find the smallest request above current floor
+                // Find the lowest request above current floor
                 it = requests.upper_bound(current_floor);
                 if (it == requests.end()) {
-                    // All requests are at or below current_floor, so go to the largest one
+                    // All requests are at or below current_floor, so go to the highest one
                     it = requests.end();
                     --it;
                 }
+            } else {
+                // There are requests at or below current floor
+                --it; // Now points to largest floor <= current_floor
             }
         }
 
@@ -75,6 +80,7 @@ public:
         requests.erase(it);
     }
 
+    // Return current floor
     int locate() const {
         return current_floor;
     }

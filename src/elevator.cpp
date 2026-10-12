@@ -1,83 +1,101 @@
 #include <iostream>
 #include <cstdio>
-#include <set>
+#include <queue>
+#include <unordered_set>
 
 using namespace std;
 
-// Elevator system for a billion-floor building
-// Supports add, cancel, action, and locate operations
+// Elevator system using two heaps (priority queues) for up and down requests
+// This approach is suggested in the problem hint
 
 class Elevator {
 private:
     int current_floor;
     int direction; // 1 for up, -1 for down
-    set<int> requests; // Sorted set of pending requests
+    
+    // Max heap for down requests (we want largest floor first when going down)
+    priority_queue<int> down_requests;
+    // Min heap for up requests (we want smallest floor first when going up)
+    priority_queue<int, vector<int>, greater<int>> up_requests;
+    
+    // To handle cancel operations, we need to mark requests as canceled
+    // We'll use lazy deletion: when canceling, add to canceled set, and when popping, check if it's canceled
+    unordered_set<int> canceled;
 
 public:
     Elevator() : current_floor(0), direction(1) {}
 
     // Add a request for a floor
     void addRequest(int floor) {
-        requests.insert(floor);
+        if (floor > current_floor) {
+            up_requests.push(floor);
+        } else if (floor < current_floor) {
+            down_requests.push(floor);
+        }
+        // If floor == current_floor, it shouldn't happen by problem constraints
     }
 
     // Cancel a request for a floor
     void cancelRequest(int floor) {
-        requests.erase(floor);
+        canceled.insert(floor);
+        // Note: we don't remove from heaps immediately, we'll do lazy deletion
+    }
+
+    // Remove canceled requests from the top of heaps
+    void cleanHeaps() {
+        // Clean up_requests
+        while (!up_requests.empty() && canceled.find(up_requests.top()) != canceled.end()) {
+            canceled.erase(up_requests.top());
+            up_requests.pop();
+        }
+        // Clean down_requests
+        while (!down_requests.empty() && canceled.find(down_requests.top()) != canceled.end()) {
+            canceled.erase(down_requests.top());
+            down_requests.pop();
+        }
     }
 
     // Execute the next action according to elevator rules
     void action() {
-        if (requests.empty()) {
+        // First, clean the heaps of any canceled requests at the top
+        cleanHeaps();
+        
+        // Check if there are any valid requests
+        if (up_requests.empty() && down_requests.empty()) {
             // No pending requests, stay in place with same direction
             return;
         }
 
-        auto it = requests.end();
-        
         if (direction == 1) { // Moving up
-            // Find the first request at or above current floor
-            it = requests.lower_bound(current_floor);
-            
-            if (it == requests.end()) {
-                // No requests at or above current floor
-                // Reverse direction to down
-                direction = -1;
-                // Find the highest request below current floor
-                it = requests.lower_bound(current_floor);
-                if (it != requests.begin()) {
-                    --it; // Now points to largest floor < current_floor
-                } else {
-                    // This should not happen as requests is not empty
-                    // But to be safe, go to the first request
-                    it = requests.begin();
-                }
-            }
-            // If we found a request at or above, it points to the smallest such request
-        } else { // Moving down
-            // Find the first request strictly greater than current floor
-            it = requests.upper_bound(current_floor);
-            
-            if (it == requests.begin()) {
-                // No requests at or below current floor (since upper_bound returns begin)
-                // Reverse direction to up
-                direction = 1;
-                // Find the lowest request above current floor
-                it = requests.upper_bound(current_floor);
-                if (it == requests.end()) {
-                    // All requests are at or below current_floor, so go to the highest one
-                    it = requests.end();
-                    --it;
-                }
+            if (!up_requests.empty()) {
+                // There are requests in the up direction, serve the nearest (smallest)
+                current_floor = up_requests.top();
+                up_requests.pop();
             } else {
-                // There are requests at or below current floor
-                --it; // Now points to largest floor <= current_floor
+                // No requests in up direction, reverse to down
+                direction = -1;
+                // Serve the nearest down request (largest, since it's a max heap)
+                current_floor = down_requests.top();
+                down_requests.pop();
+            }
+        } else { // Moving down
+            if (!down_requests.empty()) {
+                // There are requests in the down direction, serve the nearest (largest)
+                current_floor = down_requests.top();
+                down_requests.pop();
+            } else {
+                // No requests in down direction, reverse to up
+                direction = 1;
+                // Serve the nearest up request (smallest)
+                current_floor = up_requests.top();
+                up_requests.pop();
             }
         }
-
-        // Execute the request
-        current_floor = *it;
-        requests.erase(it);
+        
+        // After serving, we might have added new requests that are on the same floor
+        // But by problem constraints, we won't have a request at current_floor
+        // Also, clean the heaps in case the served floor was canceled (though it shouldn't be)
+        cleanHeaps();
     }
 
     // Return current floor

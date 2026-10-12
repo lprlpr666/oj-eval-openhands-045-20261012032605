@@ -36,24 +36,36 @@ public:
         auto it = requests.end();
         
         if (direction == 1) { // Moving up
-            // Find the smallest floor that is >= current_floor
-            it = requests.lower_bound(current_floor);
+            // Find the smallest floor that is > current_floor (strictly greater)
+            it = requests.upper_bound(current_floor);
             
             if (it == requests.end()) {
-                // No requests above, reverse direction and go to highest floor below
+                // No requests above, reverse direction and go to highest floor below or equal
                 direction = -1;
-                it = requests.end();
-                --it; // Last element (highest floor)
+                it = requests.lower_bound(current_floor);
+                if (it != requests.begin()) {
+                    --it; // Previous element (largest floor < current_floor)
+                } else {
+                    // No requests below, but we have requests (since set is not empty)
+                    // This means all requests are at or above current_floor, but we already checked above
+                    // So this should not happen
+                    it = requests.begin();
+                }
             }
         } else { // Moving down
-            // Find the largest floor that is <= current_floor
-            it = requests.upper_bound(current_floor);
+            // Find the largest floor that is < current_floor (strictly less)
+            it = requests.lower_bound(current_floor);
             if (it != requests.begin()) {
-                --it; // Previous element (largest floor <= current_floor)
+                --it; // Previous element (largest floor < current_floor)
             } else {
-                // No requests below, reverse direction and go to lowest floor above
+                // No requests below, reverse direction and go to lowest floor above or equal
                 direction = 1;
-                it = requests.begin();
+                it = requests.upper_bound(current_floor);
+                if (it == requests.end()) {
+                    // All requests are <= current_floor, so go to the highest one
+                    it = requests.end();
+                    --it;
+                }
             }
         }
 
